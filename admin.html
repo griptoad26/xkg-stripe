@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>XKG Admin — Sales, Licenses, Support</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0d1117; --bg2: #161b22; --bg3: #21262d; --bg4: #30363d;
+    --text: #e6edf3; --text2: #8b949e; --text3: #6e7681;
+    --accent: #8b5cf6; --accent-h: #a78bfa; --accent-d: #7c3aed;
+    --success: #3fb950; --danger: #f85149; --warn: #d29922;
+    --gradient: linear-gradient(135deg, #8b5cf6 0%, #6366f1 50%, #3b82f6 100%);
+  }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { color: var(--accent-h); }
+  .container { max-width: 1400px; margin: 0 auto; padding: 24px; }
+  h1 { font-size: 28px; margin-bottom: 8px; }
+  h2 { font-size: 20px; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--bg4); }
+
+  /* Login */
+  .login { max-width: 380px; margin: 100px auto; background: var(--bg2); padding: 32px; border-radius: 14px; border: 1px solid var(--bg4); }
+  .login h1 { text-align: center; margin-bottom: 24px; }
+  .login input { width: 100%; padding: 12px; background: var(--bg); border: 1px solid var(--bg4); border-radius: 8px; color: var(--text); margin-bottom: 12px; font-size: 14px; }
+  .login button { width: 100%; background: var(--gradient); color: white; padding: 12px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 15px; }
+  .login button:hover { opacity: 0.9; }
+  .login .error { color: var(--danger); font-size: 13px; margin-top: 12px; text-align: center; display: none; }
+
+  /* Dashboard */
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 32px; }
+  .stat { background: var(--bg2); border: 1px solid var(--bg4); border-radius: 12px; padding: 20px; }
+  .stat-label { color: var(--text3); font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+  .stat-value { font-size: 28px; font-weight: 800; }
+  .stat-sub { color: var(--text2); font-size: 12px; margin-top: 4px; }
+  .stat.green .stat-value { color: var(--success); }
+
+  .panel { background: var(--bg2); border: 1px solid var(--bg4); border-radius: 12px; padding: 24px; margin-bottom: 24px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; padding: 10px 12px; color: var(--text2); border-bottom: 1px solid var(--bg4); font-weight: 600; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px; }
+  td { padding: 10px 12px; border-bottom: 1px solid var(--bg4); }
+  tr:hover { background: var(--bg3); }
+  code { font-family: ui-monospace, "Cascadia Code", monospace; font-size: 12px; color: var(--accent-h); }
+  .tag { display: inline-block; padding: 2px 8px; border-radius: 100px; font-size: 11px; font-weight: 600; }
+  .tag.completed { background: rgba(63,185,80,0.15); color: var(--success); }
+  .tag.pending { background: rgba(210,153,34,0.15); color: var(--warn); }
+  .tag.open { background: rgba(248,81,73,0.15); color: var(--danger); }
+
+  .toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+  .toolbar input { padding: 8px 12px; background: var(--bg); border: 1px solid var(--bg4); border-radius: 6px; color: var(--text); font-size: 13px; width: 280px; }
+  .toolbar button { background: var(--bg3); color: var(--text); border: 1px solid var(--bg4); padding: 8px 14px; border-radius: 6px; font-size: 13px; cursor: pointer; }
+  .toolbar button:hover { background: var(--bg4); }
+
+  .refresh-btn { background: var(--gradient); color: white; padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px; }
+  .empty { text-align: center; padding: 40px; color: var(--text3); }
+  .loading { text-align: center; padding: 40px; color: var(--text2); }
+
+  .nav-bar { display: flex; gap: 8px; margin-bottom: 24px; border-bottom: 1px solid var(--bg4); }
+  .nav-bar button { background: transparent; color: var(--text2); border: none; padding: 12px 16px; cursor: pointer; font-weight: 600; border-bottom: 2px solid transparent; }
+  .nav-bar button.active { color: var(--text); border-bottom-color: var(--accent); }
+
+  .rev { color: var(--success); font-weight: 600; }
+  .meta-row { display: flex; gap: 24px; font-size: 13px; color: var(--text2); margin-top: 4px; }
+</style>
+</head>
+<body>
+
+<!-- Login -->
+<div id="login-pane" class="login">
+  <h1>🔐 XKG Admin</h1>
+  <input type="password" id="token" placeholder="Admin token" onkeypress="if(event.key==='Enter')login()">
+  <button onclick="login()">Sign in</button>
+  <div class="error" id="login-error">Invalid token</div>
+  <p style="color: var(--text3); font-size: 12px; margin-top: 16px; text-align: center;">Local dev token: <code>dev-admin-token</code></p>
+</div>
+
+<!-- Dashboard -->
+<div id="dash-pane" style="display: none;">
+  <div class="container">
+    <div class="toolbar" style="margin-bottom: 24px;">
+      <h1>XKG Admin Dashboard</h1>
+      <div>
+        <span id="api-status" style="color: var(--text3); font-size: 12px; margin-right: 12px;">Checking API…</span>
+        <button class="refresh-btn" onclick="refresh()">↻ Refresh</button>
+        <button onclick="logout()" style="background: transparent; color: var(--text2); border: 1px solid var(--bg4); padding: 8px 14px; border-radius: 6px; font-size: 13px; cursor: pointer; margin-left: 8px;">Sign out</button>
+      </div>
+    </div>
+
+    <div id="stats-row" class="stats"></div>
+
+    <div class="nav-bar">
+      <button class="active" onclick="showTab('licenses', this)">🔑 Licenses</button>
+      <button onclick="showTab('orders', this)">💳 Orders</button>
+      <button onclick="showTab('tickets', this)">🎫 Support tickets</button>
+    </div>
+
+    <div id="tab-licenses" class="panel">
+      <div class="toolbar">
+        <h2>Issued licenses</h2>
+        <input type="text" id="license-search" placeholder="Filter by email or key…" oninput="renderLicenses()">
+      </div>
+      <div id="licenses-list" class="loading">Loading…</div>
+    </div>
+
+    <div id="tab-orders" class="panel" style="display: none;">
+      <div class="toolbar">
+        <h2>Recent orders</h2>
+        <input type="text" id="order-search" placeholder="Filter by plan or email…" oninput="renderOrders()">
+      </div>
+      <div id="orders-list" class="loading">Loading…</div>
+    </div>
+
+    <div id="tab-tickets" class="panel" style="display: none;">
+      <div class="toolbar">
+        <h2>Support tickets</h2>
+        <input type="text" id="ticket-search" placeholder="Filter by ref or email…" oninput="renderTickets()">
+      </div>
+      <div id="tickets-list" class="loading">Loading…</div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const API = (location.protocol === 'https:' || location.hostname.endsWith('.ts.net'))
+    ? ''                                       // same-origin (proxied by Tailscale/Cloudflare)
+    : (location.hostname === 'localhost' || /^10\.0\.|^192\.168\.|^100\./.test(location.hostname))
+      ? 'http://' + location.hostname + ':8095'
+      : 'https://api.seele.agency';
+  let TOKEN = sessionStorage.getItem('xkg_admin_token') || '';
+  let DATA = { licenses: [], stats: null, tickets: [] };
+
+  function login() {
+    TOKEN = document.getElementById('token').value.trim();
+    sessionStorage.setItem('xkg_admin_token', TOKEN);
+    refresh().then(ok => {
+      if (!ok) {
+        document.getElementById('login-error').style.display = 'block';
+        TOKEN = '';
+        sessionStorage.removeItem('xkg_admin_token');
+      }
+    });
+  }
+  function logout() { sessionStorage.removeItem('xkg_admin_token'); location.reload(); }
+
+  async function api(path) {
+    const res = await fetch(API + path, { headers: { 'X-Admin-Token': TOKEN } });
+    if (res.status === 401) return null;
+    return res.json();
+  }
+
+  async function refresh() {
+    document.getElementById('api-status').textContent = 'Loading…';
+    const [stats, licenses, orders, tickets] = await Promise.all([
+      api('/api/admin/stats'),
+      api('/api/admin/licenses'),
+      api('/api/admin/orders'),
+      api('/api/admin/tickets'),
+    ]);
+    if (!stats) {
+      document.getElementById('login-pane').style.display = 'block';
+      document.getElementById('dash-pane').style.display = 'none';
+      document.getElementById('api-status').textContent = '';
+      return false;
+    }
+    document.getElementById('login-pane').style.display = 'none';
+    document.getElementById('dash-pane').style.display = 'block';
+    document.getElementById('api-status').innerHTML = '✓ Connected to <code>' + API + '</code>';
+    DATA.stats = stats;
+    DATA.licenses = licenses || [];
+    DATA.orders = orders || [];
+    DATA.tickets = tickets || [];
+    renderStats(); renderLicenses(); renderOrders(); renderTickets();
+    return true;
+  }
+
+  function renderStats() {
+    const s = DATA.stats;
+    const revenue = (s.revenue_cents / 100).toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+    document.getElementById('stats-row').innerHTML = `
+      <div class="stat green">
+        <div class="stat-label">Revenue</div>
+        <div class="stat-value">${revenue}</div>
+        <div class="stat-sub">${s.orders_completed} completed orders</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Licenses issued</div>
+        <div class="stat-value">${s.licenses_issued}</div>
+        <div class="stat-sub">${s.licenses_active} active</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Activations</div>
+        <div class="stat-value">${s.activations}</div>
+        <div class="stat-sub">across all devices</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Open support tickets</div>
+        <div class="stat-value">${s.support_tickets_open}</div>
+        <div class="stat-sub">awaiting response</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Avg per order</div>
+        <div class="stat-value">${s.orders_completed ? Math.round(s.revenue_cents / s.orders_completed / 100) : 0}</div>
+        <div class="stat-sub">USD per sale</div>
+      </div>
+    `;
+    // Render a small by-plan breakdown
+    if (s.by_plan && s.by_plan.length) {
+      const rows = s.by_plan.map(p => `<tr><td>${p.plan}</td><td>${p.n}</td><td class="rev">$${(p.revenue/100).toFixed(2)}</td></tr>`).join('');
+      document.getElementById('stats-row').innerHTML += `
+        <div class="stat" style="grid-column: 1 / -1;">
+          <div class="stat-label">By plan</div>
+          <table style="margin-top: 12px;"><thead><tr><th>Plan</th><th>Orders</th><th>Revenue</th></tr></thead><tbody>${rows}</tbody></table>
+        </div>
+      `;
+    }
+  }
+
+  function renderLicenses() {
+    const q = (document.getElementById('license-search').value || '').toLowerCase();
+    const filtered = DATA.licenses.filter(l =>
+      !q || (l.email && l.email.toLowerCase().includes(q)) || (l.license_key && l.license_key.toLowerCase().includes(q))
+    );
+    if (!filtered.length) { document.getElementById('licenses-list').innerHTML = '<div class="empty">No licenses yet — make a test purchase on <a href="checkout.html">checkout.html</a> to see one here.</div>'; return; }
+    const rows = filtered.slice(0, 100).map(l => `
+      <tr>
+        <td><code>${l.license_key}</code></td>
+        <td><span class="tag">${l.plan}</span></td>
+        <td>${l.email || '-'}</td>
+        <td>${l.activations}/${l.max_activations}</td>
+        <td>${l.expires_at ? new Date(l.expires_at).toLocaleDateString() : 'never'}</td>
+        <td>${l.revoked ? '<span class="tag pending">revoked</span>' : '<span class="tag completed">active</span>'}</td>
+        <td style="color: var(--text3); font-size: 11px;">${new Date(l.issued_at).toLocaleString()}</td>
+      </tr>
+    `).join('');
+    document.getElementById('licenses-list').innerHTML = `
+      <table>
+        <thead><tr><th>License key</th><th>Plan</th><th>Email</th><th>Activations</th><th>Expires</th><th>Status</th><th>Issued</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+      <p style="color: var(--text3); font-size: 12px; margin-top: 12px;">Showing ${Math.min(100, filtered.length)} of ${filtered.length}</p>
+    `;
+  }
+
+  function renderOrders() {
+    const q = (document.getElementById('order-search').value || '').toLowerCase();
+    const filtered = (DATA.orders || []).filter(o =>
+      !q || (o.plan && o.plan.toLowerCase().includes(q)) || (o.customer_email && o.customer_email.toLowerCase().includes(q)) || (o.stripe_session && o.stripe_session.toLowerCase().includes(q))
+    );
+    if (!filtered.length) { document.getElementById('orders-list').innerHTML = '<div class="empty">No orders yet.</div>'; return; }
+    const rows = filtered.slice(0, 100).map(o => `
+      <tr>
+        <td><code style="font-size: 11px;">${o.stripe_session}</code></td>
+        <td>${o.plan}</td>
+        <td>${o.customer_email || '-'}</td>
+        <td>$${(o.amount_cents/100).toFixed(2)}</td>
+        <td><span class="tag ${o.status}">${o.status}</span></td>
+        <td style="color: var(--text3); font-size: 11px;">${new Date(o.created_at).toLocaleString()}</td>
+      </tr>
+    `).join('');
+    document.getElementById('orders-list').innerHTML = `
+      <table>
+        <thead><tr><th>Session</th><th>Plan</th><th>Email</th><th>Amount</th><th>Status</th><th>Created</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    `;
+  }
+
+  function renderTickets() {
+    const q = (document.getElementById('ticket-search').value || '').toLowerCase();
+    const filtered = (DATA.tickets || []).filter(t =>
+      !q || (t.ticket_ref && t.ticket_ref.toLowerCase().includes(q)) || (t.email && t.email.toLowerCase().includes(q)) || (t.subject && t.subject.toLowerCase().includes(q))
+    );
+    if (!filtered.length) { document.getElementById('tickets-list').innerHTML = '<div class="empty">No support tickets yet — submit one via <a href="support.html">support.html</a>.</div>'; return; }
+    const rows = filtered.map(t => `
+      <tr>
+        <td><code>${t.ticket_ref}</code></td>
+        <td>${t.email || '-'}</td>
+        <td><strong>${t.subject || t.topic || '(no subject)'}</strong><div style="color: var(--text3); font-size: 12px; margin-top: 4px;">${(t.message || '').slice(0, 200)}${(t.message || '').length > 200 ? '…' : ''}</div></td>
+        <td><span class="tag ${t.status === 'closed' ? 'completed' : 'open'}">${t.status}</span></td>
+        <td style="color: var(--text3); font-size: 11px;">${new Date(t.created_at).toLocaleString()}</td>
+      </tr>
+    `).join('');
+    document.getElementById('tickets-list').innerHTML = `
+      <table>
+        <thead><tr><th>Ref</th><th>Email</th><th>Subject + message</th><th>Status</th><th>Created</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    `;
+  }
+
+  function showTab(name, btn) {
+    document.querySelectorAll('.nav-bar button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    ['licenses', 'orders', 'tickets'].forEach(t => document.getElementById('tab-' + t).style.display = t === name ? 'block' : 'none');
+  }
+
+  // Auto-login if token in sessionStorage
+  if (TOKEN) refresh();
+</script>
+
+</body>
+</html>
